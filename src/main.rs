@@ -16,9 +16,9 @@ async fn greet(name: web::Path<String>) -> impl Responder {
         id: 123,
         username: String::from("test"),
     };
-    database.add(&user);
-    database.add(&user);
-    database.remove(|x: &Value| x["id"] == user.id);
+    database.add(user.clone());
+    database.add(user.clone());
+    database.remove(|x: &User| x.id == user.id);
     let vec = database.to_vec::<User>();
     println!("{vec:?}");
     format!("Hello {name}!")
@@ -26,7 +26,6 @@ async fn greet(name: web::Path<String>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
     HttpServer::new(|| {
         App::new()
             .route("/hello", web::get().to(|| async { "Hello World!" }))

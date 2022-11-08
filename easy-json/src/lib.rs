@@ -1,5 +1,5 @@
-use serde::Serialize;
-use serde_json::Value;
+use serde::de::DeserializeOwned;
+use serde::{Serialize};
 use std::fs::File;
 use std::io::prelude::*;
 pub struct Database {
@@ -10,40 +10,38 @@ impl Database {
     pub fn new(path: String) -> Self {
         Self { path: path }
     }
-    pub fn remove<F: FnMut(&Value) -> bool>(&self, find: F) {
+    pub fn remove<T: Serialize + DeserializeOwned, F: FnMut(&T) -> bool>(&self, find: F) {
         let mut file = match File::open(self.path.clone() + ".json") {
             Ok(file) => file,
             Err(_) => write_into_file(self.path.clone(), String::from("[]")).unwrap(),
         };
         let mut content = String::from("");
         file.read_to_string(&mut content).unwrap();
-        let mut deserialized: Value = serde_json::from_str(&content).unwrap();
-        let array: &mut Vec<Value> = deserialized.as_array_mut().unwrap();
+        let mut array: Vec<T> = serde_json::from_str(&content).unwrap();
         let index = array.iter().position(find).unwrap();
         array.remove(index);
         let serialized = serde_json::to_string(&array).unwrap();
         write_into_file(self.path.clone(), serialized).unwrap();
     }
-    pub fn to_vec<T: Serialize>(&self) -> Vec<Value> {
+    pub fn to_vec<T: Serialize + DeserializeOwned>(&self) -> Vec<T> {
         let mut file = match File::open(self.path.clone() + ".json") {
             Ok(file) => file,
             Err(_) => write_into_file(self.path.clone(), String::from("[]")).unwrap(),
         };
         let mut content = String::from("");
         file.read_to_string(&mut content).unwrap();
-        let deserialized: Value = serde_json::from_str(&content).unwrap();
-        return deserialized.as_array().unwrap().to_vec();
+        let deserialized: Vec<T> = serde_json::from_str(&content).unwrap();
+        return deserialized;
     }
-    pub fn add<T: Serialize>(&self, data: T) {
+    pub fn add<T: Serialize + DeserializeOwned>(&self, data: T) {
         let mut file = match File::open(self.path.clone() + ".json") {
             Ok(file) => file,
             Err(_) => write_into_file(self.path.clone(), String::from("[]")).unwrap(),
         };
         let mut content = String::from("");
         file.read_to_string(&mut content).unwrap();
-        let mut deserialized: Value = serde_json::from_str(&content).unwrap();
-        let array: &mut Vec<Value> = deserialized.as_array_mut().unwrap();
-        array.push(serde_json::to_value(data).unwrap());
+        let mut array: Vec<T> = serde_json::from_str(&content).unwrap();
+        array.push(data);
         let serialized = serde_json::to_string(&array).unwrap();
         write_into_file(self.path.clone(), serialized).unwrap();
     }
